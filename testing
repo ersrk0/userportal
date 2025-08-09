@@ -1,0 +1,29 @@
+@Override
+    public SecondarySeller processPrimaryUserRegisteredEvent(UUID tenantId, Long divisionId, Long gemPvtOrgId, Long primaryUserRoleCode, UUID profileFk, SellerDivision sellerDivision) {
+        log.info("Processing primary user registered event for given tenantId");
+        SecondarySeller primarySeller = findPrimaryUserOfOrganisation(tenantId, sellerDivision);
+        if(primarySeller!=null){
+            throw new InvalidInputException(HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                    messageUtility.getMessage(MessageConstants.PRIMARY_USER_ALREADY_EXISTS));
+        }
+        SecondaryUserInfoResponse umsProfile = getUserInfo(profileFk);
+        SecondarySeller secondarySeller = buildSecondarySeller(
+                tenantId,
+                umsProfile.getEmailId(),
+                umsProfile.getAadhaarMobileNumber(),
+                profileFk,
+                gemPvtOrgId,
+                profileFk,
+                getLookup(LookupConstants.INVITE_TYPE_SINGLE),
+                getLookup(LookupConstants.STATUS_ACTIVE)
+        );
+        secondarySellerRepository.save(secondarySeller);
+        SecondarySellerRoleDivision roleDivision = buildSecondarySellerRoleDivision(
+                secondarySeller,
+                sellerDivision,
+                primaryUserRoleCode,
+                getLookup(LookupConstants.STATUS_ACTIVE)
+        );
+        secondarySellerRoleDivisionRepository.save(roleDivision);
+        return secondarySeller;
+    }
